@@ -36,6 +36,7 @@
 #include <string>
 
 #include "image_transport/subscriber_plugin.hpp"
+#include "image_transport/node_interfaces.hpp"
 #include "h264_msgs/msg/packet.hpp"
 
 extern "C"
@@ -55,7 +56,7 @@ private:
 
   int64_t seq_;
   int consecutive_receive_failures_;
-  AVCodec * p_codec_;
+  const AVCodec * p_codec_;
   AVCodecContext * p_codec_context_;
   AVFrame * p_frame_;
   AVPacket * p_packet_;
@@ -67,19 +68,10 @@ private:
 
 protected:
   void subscribeImpl(
-    rclcpp::Node * node,
-    const std::string &,
-    const Callback &,
-    rmw_qos_profile_t) override
-  {
-    RCLCPP_FATAL(node->get_logger(), "not used in Humble+");
-  }
-
-  void subscribeImpl(
-    rclcpp::Node * node,
+    image_transport::RequiredInterfaces node_interfaces,
     const std::string & base_topic,
     const Callback & callback,
-    rmw_qos_profile_t custom_qos,
+    rclcpp::QoS custom_qos,
     rclcpp::SubscriptionOptions options) override;
 
 public:

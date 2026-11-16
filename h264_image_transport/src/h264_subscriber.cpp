@@ -52,20 +52,23 @@ H264Subscriber::H264Subscriber()
 
 H264Subscriber::~H264Subscriber()
 {
-  avcodec_close(p_codec_context_);
-  av_free(p_codec_context_);
+  avcodec_free_context(&p_codec_context_);
   av_packet_free(&p_packet_);
   av_frame_free(&p_frame_);
 }
 
 void H264Subscriber::subscribeImpl(
-  rclcpp::Node * node,
+  image_transport::RequiredInterfaces node_interfaces,
   const std::string & base_topic,
   const Callback & callback,
-  rmw_qos_profile_t custom_qos,
+  rclcpp::QoS custom_qos,
   rclcpp::SubscriptionOptions options)
 {
-  logger_ = node->get_logger();
+  auto node_logging = node_interfaces.get<image_transport::NodeLoggingInterface>();
+  auto parameters_interface = node_interfaces.get<image_transport::NodeParametersInterface>();
+  auto topics_interface = node_interfaces.get<image_transport::NodeTopicsInterface>();
+
+  logger_ = node_logging->get_logger();
   av_log_set_level(AV_LOG_WARNING);
 
   p_codec_ = avcodec_find_decoder(AV_CODEC_ID_H264);
@@ -97,11 +100,12 @@ void H264Subscriber::subscribeImpl(
     return;
   }
 
-  auto qos = rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(custom_qos), custom_qos);
-
   // Subscribe _after_ we have successfully initialized libav
-  sub_ = node->create_subscription<h264_msgs::msg::Packet>(
-    base_topic + "/" + getTransportName(), qos,
+  sub_ = rclcpp::create_subscription<h264_msgs::msg::Packet>(
+    parameters_interface,
+    topics_interface,
+    base_topic + "/" + getTransportName(),
+    custom_qos,
     [this, callback](const typename std::shared_ptr<const h264_msgs::msg::Packet> msg) {
       internalCallback(msg, callback);
     },
